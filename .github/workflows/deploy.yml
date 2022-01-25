@@ -1,0 +1,70 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: 
+      - main
+
+# Environment variables available to all jobs and steps in this workflow
+env:
+  NAME: go-action-test
+
+jobs:
+  go-fmt:
+    name: Fmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fmt
+        run: if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then exit 1; fi
+  go-test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: run tests
+        run: CI=true go test -json ./... > test.json
+
+      - name: Annotate tests
+        if: always()
+        uses: guyarb/golang-test-annotations@v0.3.0
+        with:
+          test-results: test.json
+
+  build-push-deploy:
+    name: Build, push and deploy
+    runs-on: ubuntu-latest
+    needs:
+      - go-fmt
+      - go-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      # 通过 Dockerfile 制作镜像
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME} .
+      # 登录镜像仓库
+      - name: Login Docker Hub
+        run: |
+          docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} -p ${{ secrets.DOCKER_HUB_PASSWORD }}
+      # 推送镜像至仓库
+      - name: Push image to Docker Hub
+        run: |
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
+
+      - name: Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          # 服务器 ssh 信息
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ secrets.HOST_USERNAME }}
+          password: ${{ secrets.HOST_PASSWORD }}
+          port: ${{ secrets.HOST_PORT }}
+          script: |
+            docker stop $(docker ps --filter name=${NAME} -q)
+            docker rm -f $(docker ps -a --filter name=${NAME} -q)
+            docker rmi -f $(docker images ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME} -q)
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
+            docker run -d --name ${NAME} -p 9090:9090 ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
