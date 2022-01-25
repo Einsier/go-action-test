@@ -65,20 +65,15 @@ jobs:
           username: ${{ secrets.HOST_USERNAME }}
           password: ${{ secrets.HOST_PASSWORD }}
           port: ${{ secrets.HOST_PORT }}
-          envs: CONTAINER_NAME,IMAGE_NAME
-          script_stop: true
+          envs: CONTAINER_NAME, IMAGE_NAME
           script: |
+            echo $CONTAINER_NAME
+            echo $IMAGE_NAME
             line=`docker ps | grep $CONTAINER_NAME`
-            if [ -n "$line" ]; then
-            docker stop $CONTAINER_NAME
-            fi
+            if [ -n "$line" ]; then docker stop $CONTAINER_NAME; fi
             line=`docker ps -a | grep $CONTAINER_NAME`
-            if [ -n "$line" ]; then
-            docker rm $CONTAINER_NAME
-            fi
+            if [ -n "$line" ]; then docker rm $CONTAINER_NAME; fi
             line=`docker images | grep $IMAGE_NAME`
-            if [ -n "$line" ]; then
-            docker rmi $IMAGE_NAME
-            fi
+            if [ -n "$line" ]; then docker rmi $IMAGE_NAME; fi
             docker pull $IMAGE_NAME
             docker run --name $CONTAINER_NAME -p 9090:9090 -d $IMAGE_NAME
