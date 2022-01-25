@@ -56,24 +56,29 @@ jobs:
 
       - name: Deploy
         uses: appleboy/ssh-action@master
+        env:
+          CONTAINER_NAME: ${NAME}
+          IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
         with:
           # 服务器 ssh 信息
           host: ${{ secrets.HOST_IP }}
           username: ${{ secrets.HOST_USERNAME }}
           password: ${{ secrets.HOST_PASSWORD }}
           port: ${{ secrets.HOST_PORT }}
+          envs: CONTAINER_NAME,IMAGE_NAME
+          script_stop: true
           script: |
-            line=`docker ps | grep ${NAME}`
+            line=`docker ps | grep $CONTAINER_NAME`
             if [ -n "$line" ]; then
-            docker stop ${NAME}
+            docker stop $CONTAINER_NAME
             fi
-            line=`docker ps -a | grep ${NAME}`
+            line=`docker ps -a | grep $CONTAINER_NAME`
             if [ -n "$line" ]; then
-            docker rm ${NAME}
+            docker rm $CONTAINER_NAME
             fi
-            line=`docker images | grep ${NAME}`
+            line=`docker images | grep $IMAGE_NAME`
             if [ -n "$line" ]; then
-            docker rmi ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
+            docker rmi $IMAGE_NAME
             fi
-            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
-            docker run --name ${NAME} -p 9090:9090 -d ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
+            docker pull $IMAGE_NAME
+            docker run --name $CONTAINER_NAME -p 9090:9090 -d $IMAGE_NAME
