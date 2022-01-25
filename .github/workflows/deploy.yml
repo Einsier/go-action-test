@@ -57,8 +57,8 @@ jobs:
       - name: Deploy
         uses: appleboy/ssh-action@master
         env:
-          CONTAINER_NAME: ${NAME}
-          IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
+          CONTAINER_NAME: go-action-test
+          IMAGE_NAME: einsier/go-action-test
         with:
           # 服务器 ssh 信息
           host: ${{ secrets.HOST_IP }}
