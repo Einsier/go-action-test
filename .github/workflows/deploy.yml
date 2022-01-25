@@ -63,8 +63,14 @@ jobs:
           password: ${{ secrets.HOST_PASSWORD }}
           port: ${{ secrets.HOST_PORT }}
           script: |
-            docker stop $(docker ps --filter name=${NAME} -q)
-            docker rm -f $(docker ps -a --filter name=${NAME} -q)
-            docker rmi -f $(docker images ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME} -q)
+            if [ -n "$(docker ps | grep ${NAME})" ]; then
+	            docker stop ${NAME}
+            fi
+            if [ -n "$(docker ps -a | grep ${NAME})" ]; then
+	            docker rm ${NAME}
+            fi
+            if [ -n "$(docker images | grep ${NAME})" ]; then
+	            docker rmi ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
+            fi
             docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
             docker run -d --name ${NAME} -p 9090:9090 ${{ secrets.DOCKER_HUB_USERNAME }}/${NAME}
